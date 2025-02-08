@@ -1,9 +1,17 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import psycopg2
-import os
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 conn = psycopg2.connect(
     dbname="django_db",
@@ -18,21 +26,19 @@ class Project(BaseModel):
     title: str
     description: str
     github_link: str
-    live_demos: str | None = None
-    
-@app.get('/projects')
+    live_demo: str | None = None
+
+@app.get("/projects")
 async def get_projects():
     cursor.execute("SELECT * FROM portfolio_project")
     projects = cursor.fetchall()
-    return {
-        "projects": projects
-    }
+    return {"projects": projects}
 
-@app.post('/projects')
-async def create_project(project: Project):
+@app.get("/projects")
+async def add_project(project: Project):
     cursor.execute(
-        "INSERT INTO portfolio_project(title, description, github_link, live_demo, created_at) VALUES (%s, %s, %s, %s, NOW())",
-        (project.title, project.description, project.github_link, project.live_demos)
+        "INSERT INTO portfolio_project(title, description, github_link, live_demo) VALUES(%s, %s, %s, %s, NOW())",
+        (project.title, project.description, project.github_link, project.live_demo)
     )
     conn.commit()
     return {"message": "Project added successfully"}
@@ -46,3 +52,6 @@ async def delete_project(project_id):
     conn.commit()
     return {"message": "Project deleted sucessfully!"}
 
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
